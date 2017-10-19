@@ -1,0 +1,6 @@
+name = Just Giving CiviCRM Webform Integration
+description = JustGiving CiviCRM Webform integration (requires uk.co.mjwconsult.justgiving civicrm extension to be installed and configured).
+core = 7.x
+
+dependencies[] = webform
+dependencies[] = webform_validation

@@ -1,0 +1,349 @@
+<?php
+/**
+ * @file
+ * JustGiving Integration module
+ *
+ * @global: $_justgiving_helper
+ */
+
+function justgiving_civicrm_wf_form_alter(&$form, &$form_state, $form_id) {
+  if (substr($form_id, 0, 20) === 'webform_client_form_') {
+    civicrm_initialize();
+
+    drupal_add_js(drupal_get_path('module', 'justgiving_civicrm_wf') . '/js/checkshortname.js');
+  }
+}
+
+/*
+# implementation of hook_form_alter
+function som_revalidation_form_alter(&$form, &$form_state, $form_id) {
+  $args = drupal_get_query_parameters();
+  $case = (int) $args['case1'];
+  $appraiseeContactId = (int) $args['cid1'];
+  $appraiserContactId = (int) $args['cid2'];
+
+  switch($form_id) {
+    case 'webform_client_form_' . SOM_WEBFORM_ALLOCATE_APPRAISER:
+      // Allocate Appraiser
+
+      civicrm_initialize( true );
+
+      drupal_add_js(drupal_get_path('module', 'civicrm') . '/../packages/jquery/plugins/jquery.tokeninput.js');
+      drupal_add_js(drupal_get_path('module', 'som_revalidation').'/js/autocomplete.js');
+      drupal_add_css(drupal_get_path('module', 'som_revalidation').'/tokeninput.css');
+
+      watchdog('nathan', 'current message = <pre>' . print_r(current_path(), TRUE) . '</pre>');
+      watchdog('nathan', 'current path message = <pre>' . print_r(arg(), TRUE) . '</pre>');
+
+      $appraisalCase = _som_revalidation_get_current_appraisal($appraiseeContactId);
+
+      // $form = [];
+
+      $form['submitted']['appraisal_information']['appraisee'] = [
+        '#markup' => "
+						
+						<p>Please allocate an appraiser for {$appraisalCase['contact']['display_name']} </p>
+
+				"
+      ];
+
+      $form['submitted']['appraisal_information']['appraisal_appraisee'] = [
+        '#type' => 'textfield',
+        '#disabled' => TRUE,
+        '#default_value' => $appraisalCase['contact']['display_name']
+      ];
+
+      $form['submitted']['appraisal_information']['allocate_appraiser_contact_id'] = [
+        '#type' => 'textfield',
+        '#attributes' => [ 'id' => 'assign-appraiser' ]
+      ];
+
+      $form['submitted']['appraisal_information']['appraisal_appraisee_contact_id'] = [
+        '#type' => 'hidden',
+        '#default_value' => $appraisalCase['contact']['id']
+      ];
+
+      $form['submitted']['appraisal_information']['appraisal_case'] = [
+        '#type' => 'hidden',
+        '#default_value' => $case
+      ];
+
+      $form['actions']['submit']['#value'] = t('Allocate appraiser');
+
+      $form['#submit'][] = '_som_revalidation_allocate_appraisal';
+      $form['#submit'][] = 'som_revalidation_allocation_form_validate';
+
+      watchdog('nathan', 'webform message = <pre>' . print_r($form, TRUE) . '</pre>');
+
+      return $form;
+      break;
+
+    case 'webform_client_form_' . SOM_WEBFORM_FEEBACK_SURVEY:
+
+      // retrieve global list of custom fields
+      /*$custom_fields = json_decode(SOM_CUSTOM_FIELDS, TRUE);
+
+      if($appraisal = _som_revalidation_get_current_appraisal(_som_revalidation_get_current_user('id'))) {
+
+        $revalidation_due_date = new DateTime( $appraisal[$custom_fields['due_date']] );
+
+        $form['submitted'] += [
+          'display_due_date' => [
+            '#markup' => '<div style="padding: 20px 0;"> Your original Revalidation due date is ' . $revalidation_due_date->format('d-m-Y') . ' </div>',
+            '#weight' => -15
+          ]
+        ];
+
+      }*//*
+
+      break;
+  }
+
+}*/
+
+/**
+ * Implements hook_form_alter().
+ *//*
+function justgiving_form_alter(&$form, &$form_state, $form_id) {
+  global $_justgiving_helper;
+  switch ($form_id) {
+    case "webform_client_form_{$_justgiving_helper->forms['page']}":
+      if (isset($form['submitted']) && !empty($form['submitted'])) {
+        foreach ($form['submitted'] as $key => &$field) {
+          // debug($field);
+          switch ($key) {
+            case 'pageShortName':
+              if (isset($_justgiving_helper->session['submitted'][$_justgiving_helper->forms['account']]['full_name'][0])) {
+                $shrtname = trim(preg_replace(array(
+                  '~[:;!?\[\]]|[.,](?![0-9])|\'s~',
+                  '~\s+~'
+                ), array(
+                  '',
+                  '-'
+                ), $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['account']]['full_name'][0]));
+                $con = "{$shrtname}s-fundraising-page";
+                $suggests = $_justgiving_helper->pages('suggest', null, array($con));
+                if (!empty($suggests->Names)) {
+                  $field['#default_value'] = $suggests->Names[0];
+                  $suggestions = '<p class="jg-url-suggestions"><strong>Suggested URLS:</strong><ul>';
+                  foreach ($suggests->Names as $sugg) {
+                    $suggestions .= "<li>$sugg</li>";
+                  }
+                  $suggestions .= '</ul></p>';
+                  $field['#description'] .= $suggestions;
+                } else {
+                  $field['#default_value'] = $con;
+                }
+              }
+              break;
+
+            // Case for the fieldset.
+            case 'jg_login':
+              // debug($field);
+              if ($_justgiving_helper->session['create_account']) {
+                $field['#title'] = 'Create JG Account';
+                $field['justgiving_username']['#description'] = t('Enter your email address.  This is used to log you in to your JustGiving Account');
+                $field['justgiving_password']['#description'] = t('Create and enter a memorable password for your JustGiving Account');
+              }
+              $ikeys = array_keys($field);
+              if (isset($_justgiving_helper->session['submitted'][$_justgiving_helper->forms['account']]['email_address'][0]) && in_array('justgiving_username', $ikeys)) {
+                $field['justgiving_username']['#default_value'] = $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['account']]['email_address'][0];
+              }
+              $field['justgiving_password']['#type'] = 'password';
+              break;
+
+            case 'justgiving_username':
+              if ($_justgiving_helper->session['create_account']) {
+                $field['#description'] = t('This will be your JG login.  Defaults to email address');
+              }
+              if (isset($_justgiving_helper->session['submitted'][$_justgiving_helper->forms['account']]['email_address'][0])) {
+                $field['#default_value'] = $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['account']]['email_address'][0];
+              }
+              break;
+
+            case 'justgiving_password':
+              $field['#type'] = 'password';
+              break;
+          }
+        }
+      }
+
+      // Add AJAX functions to specific fields.
+      foreach($form['submitted'] as $key => &$field){
+        switch($key) {
+          case 'pageShortName':
+            $field['#ajax'] = array(
+              'callback' => 'justgiving_ajax_check_pageShortName',
+              'wrapper' => 'webform-component-pageShortName',
+              'effect' => 'fade',
+              'event' => 'blur',
+              'method' => 'append'
+            );
+            break;
+
+        }
+      }
+
+      break;
+  }
+}*/
+
+/**
+ * Implements hook_webform_validation_validate().
+ * @return: $errors
+ *
+ * Run our custom validation against JG.
+ *//*
+function justgiving_webform_validation_validate($validator_name, $items, $components, $rule) {
+  global $_justgiving_helper;
+  $errors = array();
+  if ($_justgiving_helper->settings['api-key']) {
+    if ($items) {
+      switch ($validator_name) {
+        case 'validate_jg_url':
+          foreach ($items as $key => $val) {
+            if (!preg_match('~[^a-z 0-9 \-]~', $val)) {
+              $shortname = trim(preg_replace(array(
+                '~[:;!?\[\]]|[.,](?![0-9])|\'s~',
+                '~\s+~',
+              ), array(
+                ' ',
+                '-',
+              ), $val));
+              if ($_justgiving_helper->client->Page->IsShortNameRegistered($shortname)) {
+                $errors[$key] = t('%d is already taken.  Please choose another.', array('%d' => $components[$key]['name']));
+              }
+            } else {
+              $errors[$key] = t('%d contains illegal characters.', array('%d' => $components[$key]['name']));
+            }
+          }
+          break;
+
+        case 'validate_jg_email':
+          foreach ($items as $key => $val) {
+            if (!$_justgiving_helper->session['create_account'] && !$_justgiving_helper->client->Account->IsEmailRegistered($val)) {
+              $errors[$key] = t('%d is not registered with JustGiving', array('%d' => $components[$key]['name']));
+            }
+            if ($_justgiving_helper->session['create_account'] && $_justgiving_helper->client->Account->IsEmailRegistered($val)) {
+              $errors[$key] = t('%d is already registered with JustGiving', array('%d' => $components[$key]['name']));
+            }
+          }
+          break;
+
+        case 'validate_jg_password':
+          if (!$_justgiving_helper->session['create_account']) {
+            $url = $_justgiving_helper->client->Account->BuildUrl($_justgiving_helper->client->Account->Parent->RootDomain . "{apiKey}/v{apiVersion}/account/validate");
+            foreach ($items as $key => $val) {
+              $payload = json_encode(array(
+                'email' => $_POST['submitted']['jg_login']['justgiving_username'],
+                'password' => $val
+              ));
+              $response = $_justgiving_helper->client->Account->curlWrapper->Post($url, $_justgiving_helper->client->Account->BuildAuthenticationValue(), $payload);
+              if(!is_array($response)){
+                $response = json_decode($response);
+                if (empty($response) || (isset($response->isValid) && !$response->isValid)) {
+                  $errors[$key] = t('The %d is incorrect', array('%d' => $components[$key]['name']));
+                }
+              } else {
+                $errors[$key] = t('There was an issue checking your credentials.');
+              }
+            }
+          }
+          break;
+      }
+    }
+  } else {
+    $errors[] = t('JustGiving is not linked');
+  }
+  return $errors;
+}*/
+
+/**
+ * Implements hook_webform_submission_presave().
+ *
+ * Hooks in before saving to DB to allow JG processing.
+ *//*
+function justgiving_webform_submission_presave($node, &$submission) {
+  global $_justgiving_helper;
+  // debug($node);
+  switch ($submission->nid) {
+    // Capture account information from this form.
+    case $_justgiving_helper->forms['account']:
+      $submitted = array();
+      foreach ($submission->data as $key => $value) {
+        $submitted[$node->webform['components'][$key]['form_key']] = $value['value'];
+      }
+      $_justgiving_helper->session['create_account'] = !$_justgiving_helper->client->Account->IsEmailRegistered($submitted['email_address'][0]);
+      $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['account']] = $submitted;
+      break;
+    // Create page case.
+    case $_justgiving_helper->forms['page']:
+      $submitted = array();
+      foreach ($submission->data as $key => $value) {
+        $submitted[$node->webform['components'][$key]['form_key']] = $value['value'];
+      }
+      $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['page']] = $submitted;
+      if ($_justgiving_helper->session['create_account']) {
+        $_justgiving_helper->accounts('create', array(
+          'title' => $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['account']]['title'][0],
+          'firstName' => $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['account']]['first_name'][0],
+          'lastName' => $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['account']]['last_name'][0],
+          'Address' => array(
+            'line1' => $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['account']]['address_1'][0],
+            'townOrCity' => $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['account']]['town_city'][0],
+            // 'country' => $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['account']]['country'][0],
+            'country' => 'United Kingdom',
+            'postcodeOrZipcode' => $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['account']]['postcode'][0]
+          ),
+          'email' => $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['page']]['justgiving_username'][0],
+          'password' => $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['page']]['justgiving_password'][0],
+          'acceptTermsAndConditions' => TRUE,
+        ));
+        $_justgiving_helper->session['create_account'] = FALSE;
+      }
+      $new_page = array(
+        'charityId' => $_justgiving_helper->settings['charity-id'],
+        'justGivingOptIn' => FALSE,
+        'charityOptIn' => FALSE,
+        'charityFunded' => FALSE,
+        'pageTitle' => $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['page']]['eventName'][0],
+        'activityType' => 'OtherCelebration',
+      );
+      foreach ($submission->data as $key => $value) {
+        switch ($node->webform['components'][$key]['form_key']) {
+          // Unset the username and password so they are not store in the DB.
+          case 'justgiving_username':
+          case 'justgiving_password':
+            unset($submission->data[$key]);
+            break;
+          default:
+            $new_page[$node->webform['components'][$key]['form_key']] = $value['value'][0];
+            break;
+        }
+      }
+      $jg_create = $_justgiving_helper->pages('create', array(
+        'username' => $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['page']]['justgiving_username'][0],
+        'password' => $_justgiving_helper->session['submitted'][$_justgiving_helper->forms['page']]['justgiving_password'][0]
+      ), $new_page);
+      // debug($jg_create);
+      $_justgiving_helper->session['page_creation_result'] = $jg_create;
+      break;
+  }
+}
+*/
+
+/**
+ * Implements hook_ajax.
+ *
+ * Ajax functionality for each field
+ * Check page short name, return page short name or suggestions if not available
+ */
+function justgiving_ajax_check_pageShortName($form, $form_state){
+  civicrm_initialize();
+// TODO: Implement
+  // This is invoked outside of the module so helper needs to be created again.
+//  $_justgiving_helper = new JustGiving();
+//  ($_justgiving_helper->client->Page->IsShortNameRegistered($_POST['submitted']['pageShortName'])) ? $message = t('Name is Taken') : $message = t('Name is available');
+//  return $message;
+}
+
